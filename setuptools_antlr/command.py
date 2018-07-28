@@ -110,7 +110,8 @@ class AntlrCommand(setuptools.Command):
 
     user_options = [
         ('grammars=', 'g', 'specify grammars to generate parsers for'),
-        ('output=', 'o', 'specify output directories where output is generated'),
+        ('output=', 'o', 'specify directories where output is generated'),
+        ('dependencies=', 'd', 'generate parser for every grammar a passed grammar depends on'),
         ('atn', None, 'generate rule augmented transition network diagrams'),
         ('encoding=', None, 'specify grammar file encoding e.g. euc-jp'),
         ('message-format=', None, 'specify output style for messages in antlr, gnu, vs2005'),
@@ -119,7 +120,7 @@ class AntlrCommand(setuptools.Command):
         ('no-listener', None, 'don\'t generate parse tree listener'),
         ('visitor', None, 'generate parse tree visitor'),
         ('no-visitor', None, 'don\'t generate parse tree visitor (default)'),
-        ('depend', None, 'generate file dependencies'),
+        ('file-dependencies', None, 'generate list of file dependencies instead of parsers'),
         ('grammar-options=', None, "set/override a grammar-level options"),
         ('w-error', None, 'treat warnings as error'),
         ('x-dbg-st', None, 'launch StringTemplate visualizer on generated code'),
@@ -130,8 +131,8 @@ class AntlrCommand(setuptools.Command):
     ]
 
     boolean_options = ['atn', 'long-messages', 'listener', 'no-listener', 'visitor', 'no-visitor',
-                       'depend', 'w-error', 'x-dbg-st', 'x-dbg-st-wait', 'x-exact-output-dir',
-                       'x-force-atn', 'x-log']
+                       'file-dependencies', 'w-error', 'x-dbg-st', 'x-dbg-st-wait',
+                       'x-exact-output-dir', 'x-force-atn', 'x-log']
 
     negative_opt = {'no-listener': 'listener', 'no-visitor': 'visitor'}
 
@@ -142,13 +143,14 @@ class AntlrCommand(setuptools.Command):
         """
         self.grammars = None
         self.output = {}
+        self.dependencies = 0
         self.atn = 0
         self.encoding = None
         self.message_format = None
         self.long_messages = 0
         self.listener = 1
         self.visitor = 0
-        self.depend = 0
+        self.file_dependencies = 0
         self.grammar_options = {}
         self.w_error = 0
         self.x_dbg_st = 0
@@ -245,7 +247,6 @@ class AntlrCommand(setuptools.Command):
 
     def _find_grammars(self, base_path: pathlib.Path=pathlib.Path('.')) -> typing.List[AntlrGrammar]:
         """Searches for all ANTLR grammars starting from base directory and returns a list of it.
-        Only grammars which aren't included by other grammars are part of this list.
 
         :param base_path: base path to search for ANTLR grammars
         :return: a list of all found ANTLR grammars
@@ -270,7 +271,6 @@ class AntlrCommand(setuptools.Command):
                 grammars.append(AntlrGrammar(pathlib.Path(root, fb)))
 
         # generate a dependency tree for each grammar
-        grammar_tree = []
         try:
             for grammar in grammars:
                 imports = grammar.read_imports()
@@ -284,12 +284,8 @@ class AntlrCommand(setuptools.Command):
             raise distutils.errors.DistutilsFileError('Imported grammar "{}" in file "{}" isn\'t '
                                                       'present in package source directory.'.format(
                                                           str(e), str(e.parent.path)))
-        else:
-            # remove all grammars which aren't the root of a dependency tree
-            grammar_tree[:] = filter(lambda r: all(r not in g.dependencies for g in grammars),
-                                     grammars)
 
-        return grammar_tree
+        return grammars
 
     @classmethod
     def _create_init_file(cls, path: pathlib.Path) -> bool:
@@ -318,10 +314,15 @@ class AntlrCommand(setuptools.Command):
         if not antlr_jar:
             raise distutils.errors.DistutilsExecError('no ANTLR jar was found in lib directory')
 
-        # find grammars and filter result if grammars are passed by user
+        # find grammars
         grammars = self._find_grammars()
+
+        # remove all grammars which aren't the root of a dependency tree
+        grammars[:] = filter(lambda r: all(r not in g.dependencies for g in grammars), grammars)
+
+        # filter found grammars if grammars are passed by user
         if self.grammars:
-            grammars = filter(lambda g: g.name in self.grammars, grammars)
+            grammars[:] = filter(lambda g: g.name in self.grammars, grammars)
 
         # generate parser for each grammar
         for grammar in grammars:
@@ -337,7 +338,7 @@ class AntlrCommand(setuptools.Command):
                 run_args.append('-long-messages')
             run_args.append('-listener' if self.listener else '-no-listener')
             run_args.append('-visitor' if self.visitor else '-no-visitor')
-            if self.depend:
+            if self.file_dependencies:
                 run_args.append('-depend')
             run_args.extend(['-D{}={}'.format(option, value) for option, value in
                             self.grammar_options.items()])
@@ -384,7 +385,7 @@ class AntlrCommand(setuptools.Command):
             grammar_file = grammar.path.name
             run_args.append(str(grammar_file))
 
-            if self.depend:
+            if self.file_dependencies:
                 dependency_file = pathlib.Path(package_dir, 'dependencies.txt')
                 distutils.log.info('generating {} file dependencies -> {}'.format(grammar_file,
                                                                                   dependency_file))

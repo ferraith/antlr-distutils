@@ -114,7 +114,8 @@ See ``python setup.py antlr --help`` for available command line options:
     ...
     Options for 'AntlrCommand' command:
       --grammars (-g)       specify grammars to generate parsers for
-      --output (-o)         specify output directories where output is generated
+      --output (-o)         specify directories where output is generated
+      --dependencies (-d)   generate parser for every grammar a passed grammar depends on
       --atn                 generate rule augmented transition network diagrams
       --encoding            specify grammar file encoding e.g. euc-jp
       --message-format      specify output style for messages in antlr, gnu, vs2005
@@ -124,7 +125,7 @@ See ``python setup.py antlr --help`` for available command line options:
       --no-listener         don't generate parse tree listener
       --visitor             generate parse tree visitor
       --no-visitor          don't generate parse tree visitor (default)
-      --depend              generate file dependencies
+      --file-dependencies   generate list of file dependencies instead of parsers
       --grammar-options     set/override a grammar-level option
       --w-error             treat warnings as error
       --x-dbg-st            launch StringTemplate visualizer on generated code
@@ -142,9 +143,12 @@ Apart from passing options on the command line it's also possible to add a dedic
 
     [antlr]
     # Specify grammars to generate parsers for; default: None
-    #grammars = <root-level grammar> [<root-level-grammar> ...]
-    # Specify output directories where all output is generated; default: ./
-    output = default=gen
+    #grammars = <grammar> [<grammar> ...]
+    # Specify directories where output is generated; default: ./
+    #output = [default=<output path>]
+    #         [<grammar>=<output path> ...]
+    # Generate parser for every grammar a passed grammar depends on (yes|no); default: no
+    #dependencies = no
     # Generate DOT graph files that represent the internal ATN data structures (yes|no); default: no
     #atn = no
     # Specify grammar file encoding; default: utf-8
@@ -157,8 +161,8 @@ Apart from passing options on the command line it's also possible to add a dedic
     #listener = yes
     # Generate parse tree visitor (yes|no); default: no
     visitor = yes
-    # Generate file dependencies (yes|no); default: no
-    #depend = no
+    # Generate list of file dependencies instead of parsers (yes|no); default: no
+    #file-dependencies = no
     # Set/override grammar-level options (<option>=<value> [<option>=value ...]); default: language=Python3
     grammar-options = superClass=Abc
                       tokenVocab=SomeLexer

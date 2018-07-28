@@ -132,15 +132,25 @@ class TestAntlrCommand:
     def test_find_grammars_distributed(self, command):
         g = command._find_grammars(pathlib.Path('distributed'))
 
-        assert len(g) == 1
-        assert g[0].name == 'SomeGrammar'
+        assert len(g) == 3
+
+        assert g[0].name == 'CommonTerminals'
         d = g[0].dependencies
+        assert len(d) == 0
+
+        assert g[1].name == 'SharedRules'
+        d = g[1].dependencies
+        assert len(d) == 1
+        assert d[0].name == 'CommonTerminals'
+
+        assert g[2].name == 'SomeGrammar'
+        d = g[2].dependencies
         assert len(d) == 2
         assert d[0].name == 'CommonTerminals'
         assert d[1].name == 'SharedRules'
-        dd = g[0].dependencies[0].dependencies
+        dd = g[2].dependencies[0].dependencies
         assert len(dd) == 0
-        dd = g[0].dependencies[1].dependencies
+        dd = g[2].dependencies[1].dependencies
         assert len(dd) == 1
         assert dd[0].name == 'CommonTerminals'
 
@@ -183,7 +193,7 @@ class TestAntlrCommand:
         assert command.long_messages == 0
         assert command.listener == 1
         assert command.visitor == 0
-        assert command.depend == 0
+        assert command.file_dependencies == 0
         assert command.grammar_options['language'] == 'Python3'
         assert command.w_error == 0
         assert command.x_dbg_st == 0
@@ -553,10 +563,10 @@ class TestAntlrCommand:
 
     @pytest.mark.usefixtures('configured_command')
     @unittest.mock.patch('subprocess.run')
-    def test_run_depend_enabled(self, mock_run, configured_command):
+    def test_run_file_dependencies_enabled(self, mock_run, configured_command):
         mock_run.return_value = unittest.mock.Mock(returncode=0, stdout='FooParser.py : Foo.g4')
 
-        configured_command.depend = 1
+        configured_command.file_dependencies = 1
         configured_command.run()
 
         args, _ = mock_run.call_args
@@ -565,9 +575,9 @@ class TestAntlrCommand:
 
     @pytest.mark.usefixtures('configured_command')
     @unittest.mock.patch('subprocess.run')
-    def test_run_depend_disabled(self, mock_run, configured_command):
+    def test_run_file_dependencies_disabled(self, mock_run, configured_command):
         mock_run.return_value = unittest.mock.Mock(returncode=0)
-        configured_command.depend = 0
+        configured_command.file_dependencies = 0
         configured_command.run()
 
         args, _ = mock_run.call_args
