@@ -183,7 +183,7 @@ class TestAntlrCommand:
         assert command.long_messages == 0
         assert command.listener == 1
         assert command.visitor == 0
-        assert command.depend == 0
+        assert command.file_dependencies == 0
         assert command.grammar_options['language'] == 'Python3'
         assert command.w_error == 0
         assert command.x_dbg_st == 0
@@ -553,10 +553,10 @@ class TestAntlrCommand:
 
     @pytest.mark.usefixtures('configured_command')
     @unittest.mock.patch('subprocess.run')
-    def test_run_depend_enabled(self, mock_run, configured_command):
+    def test_run_file_dependencies_enabled(self, mock_run, configured_command):
         mock_run.return_value = unittest.mock.Mock(returncode=0, stdout='FooParser.py : Foo.g4')
 
-        configured_command.depend = 1
+        configured_command.file_dependencies = 1
         configured_command.run()
 
         args, _ = mock_run.call_args
@@ -565,9 +565,9 @@ class TestAntlrCommand:
 
     @pytest.mark.usefixtures('configured_command')
     @unittest.mock.patch('subprocess.run')
-    def test_run_depend_disabled(self, mock_run, configured_command):
+    def test_run_file_dependencies_disabled(self, mock_run, configured_command):
         mock_run.return_value = unittest.mock.Mock(returncode=0)
-        configured_command.depend = 0
+        configured_command.file_dependencies = 0
         configured_command.run()
 
         args, _ = mock_run.call_args
