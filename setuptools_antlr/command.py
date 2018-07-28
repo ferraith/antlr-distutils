@@ -247,7 +247,6 @@ class AntlrCommand(setuptools.Command):
 
     def _find_grammars(self, base_path: pathlib.Path=pathlib.Path('.')) -> typing.List[AntlrGrammar]:
         """Searches for all ANTLR grammars starting from base directory and returns a list of it.
-        Only grammars which aren't included by other grammars are part of this list.
 
         :param base_path: base path to search for ANTLR grammars
         :return: a list of all found ANTLR grammars
@@ -272,7 +271,6 @@ class AntlrCommand(setuptools.Command):
                 grammars.append(AntlrGrammar(pathlib.Path(root, fb)))
 
         # generate a dependency tree for each grammar
-        grammar_tree = []
         try:
             for grammar in grammars:
                 imports = grammar.read_imports()
@@ -286,12 +284,8 @@ class AntlrCommand(setuptools.Command):
             raise distutils.errors.DistutilsFileError('Imported grammar "{}" in file "{}" isn\'t '
                                                       'present in package source directory.'.format(
                                                           str(e), str(e.parent.path)))
-        else:
-            # remove all grammars which aren't the root of a dependency tree
-            grammar_tree[:] = filter(lambda r: all(r not in g.dependencies for g in grammars),
-                                     grammars)
 
-        return grammar_tree
+        return grammars
 
     @classmethod
     def _create_init_file(cls, path: pathlib.Path) -> bool:
@@ -320,10 +314,15 @@ class AntlrCommand(setuptools.Command):
         if not antlr_jar:
             raise distutils.errors.DistutilsExecError('no ANTLR jar was found in lib directory')
 
-        # find grammars and filter result if grammars are passed by user
+        # find grammars
         grammars = self._find_grammars()
+
+        # remove all grammars which aren't the root of a dependency tree
+        grammars[:] = filter(lambda r: all(r not in g.dependencies for g in grammars), grammars)
+
+        # filter found grammars if grammars are passed by user
         if self.grammars:
-            grammars = filter(lambda g: g.name in self.grammars, grammars)
+            grammars[:] = filter(lambda g: g.name in self.grammars, grammars)
 
         # generate parser for each grammar
         for grammar in grammars:
