@@ -175,6 +175,20 @@ Apart from passing options on the command line it's also possible to add a dedic
     # Dump lots of logging info to antlr-<timestamp>.log (yes|no); default: no
     #x-log = no
 
+Some flags specific to setuptools-antlr can also be provided to the ``[antlr]``
+section of your ``setup.cfg``.
+
+.. code:: ini
+
+    [antlr]
+    # Configure the root directory for your module; default: .
+    #package-dir = .
+
+    # Control the creation of __init__.py files in all directories about output
+    # directories; default: yes
+    #gen-packages = yes
+
+
 A reference configuration is provided in the ``resources`` directory.
 
 Sample
