@@ -132,12 +132,14 @@ class AntlrCommand(setuptools.Command):
         ('x-dbg-st-wait', None, 'wait for STViz to close before continuing'),
         ('x-exact-output-dir', None, 'output goes into -o directories regardless of paths/package'),
         ('x-force-atn', None, 'use the ATN simulator for all predictions'),
-        ('x-log', None, 'dump lots of logging info to antlr-<timestamp>.log')
+        ('x-log', None, 'dump lots of logging info to antlr-<timestamp>.log'),
+        ('package-dir', 'd', 'root directory for your source content'),
+        ('gen-packages', None, 'configure whether __init__.py files will be generated for your project'),
     ]
 
     boolean_options = ['atn', 'long-messages', 'listener', 'no-listener', 'visitor', 'no-visitor',
                        'depend', 'w-error', 'x-dbg-st', 'x-dbg-st-wait', 'x-exact-output-dir',
-                       'x-force-atn', 'x-log']
+                       'x-force-atn', 'x-log', 'gen-packages']
 
     negative_opt = {'no-listener': 'listener', 'no-visitor': 'visitor'}
 
@@ -162,6 +164,9 @@ class AntlrCommand(setuptools.Command):
         self.x_exact_output_dir = 0
         self.x_force_atn = 0
         self.x_log = 0
+
+        self.package_dir = '.'
+        self.gen_packages = 1
 
     def finalize_options(self):
         """Sets final values for all the options that this command supports. This is always called
@@ -305,6 +310,25 @@ class AntlrCommand(setuptools.Command):
             return False
         return True
 
+    def _create_package_init_files(self, grammar_package_dir: pathlib.Path):
+        """Create Python package including parent packages if don't exist
+
+        :param grammar_package_dir: path where grammar was generated
+        """
+        distutils.log.info('generating __init__.py for {}'.format(grammar_package_dir.name))
+        self._create_init_file(grammar_package_dir)
+
+        # Go up directory hierarchy and make all parents packages, if requested
+        if self.gen_packages:
+            base_dir = pathlib.Path(self.package_dir).resolve()
+            parent_dir = grammar_package_dir.resolve().parent
+
+            while base_dir < parent_dir:
+                distutils.log.info('generating __init__.py for {}'.format(parent_dir.name))
+                self._create_init_file(parent_dir)
+                parent_dir = parent_dir.parent
+        pass
+
     def run(self):
         """Performs all tasks necessary to generate ANTLR based parsers for all found grammars. This
         process is controlled by the user options passed on the command line or set internally to
@@ -397,15 +421,7 @@ class AntlrCommand(setuptools.Command):
             else:
                 distutils.log.info('generating {} parser -> {}'.format(grammar.name, package_dir))
 
-                # create Python package including parent packages if don't exist
-                self._create_init_file(package_dir)
-
-                base_dir = pathlib.Path('.').resolve()
-                parent_dir = package_dir.resolve().parent
-
-                while base_dir < parent_dir:
-                    self._create_init_file(parent_dir)
-                    parent_dir = parent_dir.parent
+                self._create_package_init_files(package_dir)
 
                 # call ANTLR for parser generation
                 result = subprocess.run(run_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,

@@ -175,6 +175,77 @@ class TestAntlrCommand:
         assert not created
         assert init_file.stat().st_mtime_ns == origin_init_mtime_ns
 
+    @unittest.mock.patch('setuptools_antlr.command.find_java')
+    @unittest.mock.patch.object(AntlrCommand, '_find_antlr')
+    @unittest.mock.patch('subprocess.run')
+    @unittest.mock.patch.object(AntlrCommand, '_find_grammars')
+    def test_create_package_init_files_no_gen(self, mock_find_grammars, mock_run, mock_find_antlr,
+                                              mock_find_java, tmpdir, command):
+        # Boilerplate to init command to run successfully
+        java_exe = pathlib.Path('c:/path/to/java/bin/java.exe')
+        antlr_jar = pathlib.Path('antlr-4.5.3-complete.jar')
+        mock_find_java.return_value = java_exe
+        mock_find_antlr.return_value = antlr_jar
+
+        grammar = AntlrGrammar(pathlib.Path('SomeGrammar.g4'))
+        mock_find_grammars.return_value = [grammar]
+        mock_run.return_value = unittest.mock.Mock(returncode=0)
+
+        # Setup grammar generation directories
+        base_dir = str(tmpdir.mkdir('base'))
+        parent_dir = pathlib.Path(base_dir, 'parent')
+        grammar_dir = pathlib.Path(parent_dir, 'some_grammar')
+
+        # Configure command to not generate packages b/c the grammars' directory
+        command.output['default'] = parent_dir
+        command.gen_packages = 0
+        os.chdir(str(base_dir))
+
+        command.run()
+
+        # We should have a package __init__.py, but not a parent one
+        package_init_file = pathlib.Path(grammar_dir, '__init__.py')
+        parent_init_file = pathlib.Path(parent_dir, '__init__.py')
+        assert package_init_file.exists()
+        assert not parent_init_file.exists()
+
+    @unittest.mock.patch('setuptools_antlr.command.find_java')
+    @unittest.mock.patch.object(AntlrCommand, '_find_antlr')
+    @unittest.mock.patch('subprocess.run')
+    @unittest.mock.patch.object(AntlrCommand, '_find_grammars')
+    def test_create_package_init_files_package_dir(self, mock_find_grammars, mock_run, mock_find_antlr,
+                                                   mock_find_java, tmpdir, command):
+        # Boilerplate to init command to run successfully
+        java_exe = pathlib.Path('c:/path/to/java/bin/java.exe')
+        antlr_jar = pathlib.Path('antlr-4.5.3-complete.jar')
+        mock_find_java.return_value = java_exe
+        mock_find_antlr.return_value = antlr_jar
+
+        grammar = AntlrGrammar(pathlib.Path('SomeGrammar.g4'))
+        mock_find_grammars.return_value = [grammar]
+        mock_run.return_value = unittest.mock.Mock(returncode=0)
+
+        # Setup grammar generation directories
+        base_dir = str(tmpdir.mkdir('base'))
+        parent_dir = pathlib.Path(base_dir, 'parent')
+        grammar_dir = pathlib.Path(parent_dir, 'some_grammar')
+
+        #
+        # Configure command to consider the parent_dir to be the base_dir,
+        # meaning it won't generate an __init__.py file for it
+        #
+        command.output['default'] = parent_dir
+        command.package_dir = parent_dir.name
+        os.chdir(str(base_dir))
+
+        command.run()
+
+        # We should have a package __init__.py, but not a parent one
+        package_init_file = pathlib.Path(grammar_dir, '__init__.py')
+        parent_init_file = pathlib.Path(parent_dir, '__init__.py')
+        assert package_init_file.exists()
+        assert not parent_init_file.exists()
+
     def test_finalize_options_default(self, command):
         command.finalize_options()
 
@@ -193,6 +264,8 @@ class TestAntlrCommand:
         assert command.x_dbg_st_wait == 0
         assert command.x_force_atn == 0
         assert command.x_log == 0
+        assert command.package_dir == '.'
+        assert command.gen_packages == 1
 
     def test_finalize_options_grammars_single(self, command):
         command.grammars = 'Foo'
