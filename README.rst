@@ -124,6 +124,7 @@ See ``python setup.py antlr --help`` for available command line options:
       --no-listener         don't generate parse tree listener
       --visitor             generate parse tree visitor
       --no-visitor          don't generate parse tree visitor (default)
+      --package             specify a package/namespace for the generated code
       --depend              generate file dependencies
       --grammar-options     set/override a grammar-level option
       --w-error             treat warnings as error
