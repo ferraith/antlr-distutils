@@ -186,6 +186,7 @@ class TestAntlrCommand:
         assert command.long_messages == 0
         assert command.listener == 1
         assert command.visitor == 0
+        assert command.package is None
         assert command.depend == 0
         assert command.grammar_options['language'] == 'Python3'
         assert command.w_error == 0
@@ -528,6 +529,31 @@ class TestAntlrCommand:
         args, _ = mock_run.call_args
         assert mock_run.called
         assert '-no-visitor' in args[0]
+
+    @pytest.mark.usefixtures('configured_command')
+    @unittest.mock.patch('subprocess.run')
+    def test_run_package_specified(self, mock_run, configured_command):
+        mock_run.return_value = unittest.mock.Mock(returncode=0)
+
+        configured_command.package = 'test'
+        configured_command.run()
+
+        args, _ = mock_run.call_args
+        assert mock_run.called
+        assert '-package' in args[0]
+        assert 'test' in args[0]
+
+    @pytest.mark.usefixtures('configured_command')
+    @unittest.mock.patch('subprocess.run')
+    def test_run_package_not_specified(self, mock_run, configured_command):
+        mock_run.return_value = unittest.mock.Mock(returncode=0)
+
+        configured_command.package = None
+        configured_command.run()
+
+        args, _ = mock_run.call_args
+        assert mock_run.called
+        assert '-package' not in args[0]
 
     @pytest.mark.usefixtures('configured_command')
     @unittest.mock.patch('subprocess.run')

@@ -125,6 +125,7 @@ class AntlrCommand(setuptools.Command):
         ('no-listener', None, 'don\'t generate parse tree listener'),
         ('visitor', None, 'generate parse tree visitor'),
         ('no-visitor', None, 'don\'t generate parse tree visitor (default)'),
+        ('package=', None, 'specify a package/namespace for the generated code'),
         ('depend', None, 'generate file dependencies'),
         ('grammar-options=', None, "set/override a grammar-level options"),
         ('w-error', None, 'treat warnings as error'),
@@ -154,6 +155,7 @@ class AntlrCommand(setuptools.Command):
         self.long_messages = 0
         self.listener = 1
         self.visitor = 0
+        self.package = None
         self.depend = 0
         self.grammar_options = {}
         self.w_error = 0
@@ -337,6 +339,8 @@ class AntlrCommand(setuptools.Command):
                 run_args.append('-long-messages')
             run_args.append('-listener' if self.listener else '-no-listener')
             run_args.append('-visitor' if self.visitor else '-no-visitor')
+            if self.package:
+                run_args.extend(['-package', self.package])
             if self.depend:
                 run_args.append('-depend')
             run_args.extend(['-D{}={}'.format(option, value) for option, value in
